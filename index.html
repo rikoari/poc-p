@@ -1,0 +1,141 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PoC A</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+  <!-- Latest CDN production Auth JS SDK-->
+  <script src="https://global.oktacdn.com/okta-auth-js/7.2.0/okta-auth-js.min.js" type="text/javascript"></script>
+  <script type="text/javascript">
+
+    // UPDATE THESE FOR YOUR OKTA TENANT
+    var baseOktaURL = "https://dev-60244997.okta.com"; //For example, https://dev-08607539.okta.com
+    var appClientID = "0oaepdpigiWEzkph85d7"; // For example, 0oa73hm5sh9jf6s5e1d6
+    
+    // Bootstrap the AuthJS Client
+    const authClient = new OktaAuth({
+      // Required Fields for OIDC client
+      url: baseOktaURL,
+      clientId: appClientID,
+      redirectUri: "https://rikoari.github.io/poc-a/", //or the redirect URI for your app
+      postLogoutRedirectUri: "https://rikoari.github.io/poc-a/",
+      issuer: baseOktaURL , // oidc
+      scopes: ['openid', 'profile', 'email'],
+      pkce: true,
+      tokenManager: {
+        storage: 'cookie'
+      },
+      devMode: true
+    });
+    
+    // Subscribe to authState change event.
+    authClient.authStateManager.subscribe(function(authState) {
+      // Logic based on authState is done here.
+      if (!authState.isAuthenticated) {
+        // render unathenticated view
+        console.log("Unauthenticated.");
+        
+        document.getElementById('logout-btn').disabled = true;
+        return;
+      }
+
+      // Render authenticated view
+
+    });
+
+    if (authClient.isLoginRedirect()) {
+      // Parse token from redirect url
+      console.log("Parse token from redirect url");
+      authClient.token.parseFromUrl()
+        .then(data => {
+          const { idToken } = data.tokens;
+          authClient.tokenManager.setTokens(data);
+          // Display the Token
+          const str1 = document.createElement('p');
+          str1.innerHTML = `<b>${idToken.claims.email}</b> (email)<br /><b>${idToken.claims.sub}</b> (sub)<br /><br />Token Response:<br /><code style="word-wrap: break-word;">${JSON.stringify(idToken)}</code><br /><br/>Parsed from JWT<br />Client ID: <b>${authClient.options.clientId}</b><br />Issuer: <b>${authClient.options.issuer}</b>`;
+          document.getElementById('content-jwt').appendChild(str1);
+        });
+    }
+
+    // Logout
+    function logout(){
+      authClient.tokenManager.clear();
+      // Normally tokens are cleared after redirect. For in-memory storage we should clear before.
+      authClient.signOut({
+        clearTokensBeforeRedirect: true
+      });
+    }
+
+    // normal app startup
+    authClient.start(); // will update auth state and call event listeners
+    </script>
+</head>
+
+<body class="d-flex flex-column h-100 p-1">
+  <nav class="navbar bg-dark border-bottom border-body" data-bs-theme="dark">
+    <div class="container-fluid">
+      <span class="navbar-brand mb-0 h1">PoC</span>
+    </div>
+  </nav>
+  
+  <div class="row">
+    <div class="col">
+      <p>Welcome to our customer portal, where you can access your account information and services.</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col">
+      <ul>
+        <li>Begin by entering your customer ID to identify yourself.</li>
+        <li>Next, complete the eKYC process to verify your identity and ensure the security of your account.</li>
+        <li>Once your identity is verified, you can create an AIA ID, digital identity for authentication purposes, allowing you to securely access your account and services.</li>
+      </ul>
+    </div>
+  </div>
+    
+  <button type="button" class="btn btn-dark">Start</button>
+  
+  <hr>
+  <p>Already have AIA ID, please sign in below.</p>
+
+  <div class="row">
+    <div class="d-grid gap-2">
+      <button type="button" class="btn btn-dark" onclick="authClient.token.getWithRedirect({
+        responseType: ['token', 'id_token']
+      });;">Sign in</button>
+    </div>
+  </div>
+  <p></p>
+  
+  <div class="row">
+    <div class="d-grid gap-2">
+      <button type="button" class="btn btn-dark" onclick="authClient.token.getWithRedirect({
+        responseType: ['token', 'id_token'],
+        idp: '0oahwmd1wgbzRJWtg5d7',
+        scopes: ['openid', 'profile', 'email'],
+        state: 'sasasas',
+        nonce: 'aaassss'
+      });;">Sign in with external IdP</button>
+    </div>
+  </div>
+  <p></p>
+  
+  <div class="row">
+    <div class="d-grid gap-2">
+      <button id="logout-btn" type="button" class="btn btn-dark" onclick="logout()">Sign out</button>
+    </div>
+    <p></p>
+  </div>
+  
+  <div class="row">
+    <div id="content-jwt"></div>
+  </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+  
+</body>
+
+</html>
